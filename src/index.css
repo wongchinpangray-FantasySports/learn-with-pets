@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-padding-bottom: calc(7.75rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
+}
+
+body {
+  margin: 0;
+  font-family: 'Fredoka', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+button, input {
+  font-family: inherit;
+}
+
+@keyframes pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-pop {
+  animation: pop 0.3s ease-out;
+}

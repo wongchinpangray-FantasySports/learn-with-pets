@@ -1,0 +1,14 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: bb8-english
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node server/preview.mjs
+    healthCheckPath: /api/tts/status
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ELEVENLABS_API_KEY
+        sync: false
