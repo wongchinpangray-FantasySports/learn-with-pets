@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import type { GameStore, PetType, Screen } from '../types'
 import { FOOD_HUNGER, SHOP_ITEMS, getShopItemById } from '../data/content'
 import { TRANSLATION_UNLOCK_COST } from '../data/wordTranslationsZh'
+import { calculatePetDecay, clampPetStat } from '../utils/petDecay'
 
 const initialState = {
   playerName: '',
@@ -10,6 +11,7 @@ const initialState = {
   coins: 0,
   hunger: 80,
   happiness: 80,
+  lastPetDecayAt: null as number | null,
   completedLessons: [] as string[],
   ownedItems: [] as string[],
   foodInventory: {} as Record<string, number>,
@@ -59,7 +61,12 @@ export const useGameStore = create<GameStore>()(
       selectPet: (pet) => set({ selectedPet: pet }),
 
       completeOnboarding: () =>
-        set({ onboarded: true, currentScreen: 'home', coins: 20 }),
+        set({
+          onboarded: true,
+          currentScreen: 'home',
+          coins: 20,
+          lastPetDecayAt: Date.now(),
+        }),
 
       addCoins: (amount) => set((s) => ({ coins: s.coins + amount })),
 
@@ -76,7 +83,7 @@ export const useGameStore = create<GameStore>()(
         set((s) => ({
           completedLessons: [...s.completedLessons, lessonId],
           coins: s.coins + reward,
-          happiness: Math.min(100, s.happiness + 10),
+          happiness: clampPetStat(s.happiness + 10),
         }))
       },
 
@@ -90,10 +97,46 @@ export const useGameStore = create<GameStore>()(
 
         set({
           foodInventory: nextInventory,
-          hunger: Math.min(100, state.hunger + hungerBoost),
-          happiness: Math.min(100, state.happiness + 5),
+          hunger: clampPetStat(state.hunger + hungerBoost),
+          happiness: clampPetStat(state.happiness + 5),
         })
         return true
+      },
+
+      playWithPet: (coinCost, happinessBoost) => {
+        const state = get()
+        if (state.coins < coinCost) return false
+
+        set({
+          coins: state.coins - coinCost,
+          happiness: clampPetStat(state.happiness + happinessBoost),
+        })
+        return true
+      },
+
+      applyPetDecay: () => {
+        const state = get()
+        if (!state.onboarded || !state.selectedPet) return
+
+        const next = calculatePetDecay(
+          state.hunger,
+          state.happiness,
+          state.lastPetDecayAt
+        )
+
+        if (
+          next.hunger === state.hunger &&
+          next.happiness === state.happiness &&
+          next.lastDecayAt === state.lastPetDecayAt
+        ) {
+          return
+        }
+
+        set({
+          hunger: next.hunger,
+          happiness: next.happiness,
+          lastPetDecayAt: next.lastDecayAt,
+        })
       },
 
       buyItem: (itemId, price) => {
@@ -154,7 +197,7 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: 'bb8-english-save',
-      version: 5,
+      version: 6,
       migrate: (persisted, version) => {
         let state = { ...(persisted as GameStore), currentScreen: (persisted as GameStore).currentScreen ?? 'onboarding' }
         if (version < 2) {
@@ -171,6 +214,9 @@ export const useGameStore = create<GameStore>()(
         if (version < 5) {
           state.bgmVolume = state.bgmVolume ?? 0.28
         }
+        if (version < 6) {
+          state.lastPetDecayAt = state.lastPetDecayAt ?? Date.now()
+        }
         return state
       },
       onRehydrateStorage: () => (state) => {
@@ -179,6 +225,7 @@ export const useGameStore = create<GameStore>()(
           if (Object.keys(patch).length > 0) {
             useGameStore.setState(patch)
           }
+          useGameStore.getState().applyPetDecay()
         }
       },
     }

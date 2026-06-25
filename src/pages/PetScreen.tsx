@@ -17,6 +17,7 @@ export function PetScreen() {
     equippedOutfit,
     equippedAccessory,
     feedPet,
+    playWithPet,
   } = useGameStore()
 
   const [message, setMessage] = useState('')
@@ -47,15 +48,12 @@ export function PetScreen() {
   }
 
   const handlePlay = () => {
-    if (coins < 2) {
+    const success = playWithPet(2, 15)
+    if (success) {
+      showMessage('Wheee! That was fun! 🎾', '🎾')
+    } else {
       showMessage('Need 2 coins to play! Earn more from lessons! 🪙', '😢')
-      return
     }
-    useGameStore.getState().spendCoins(2)
-    useGameStore.setState((s) => ({
-      happiness: Math.min(100, s.happiness + 15),
-    }))
-    showMessage('Wheee! That was fun! 🎾', '🎾')
   }
 
   if (!selectedPet || !pet) return null
@@ -92,6 +90,11 @@ export function PetScreen() {
           {hunger < 30 && (
             <p className="font-kid text-orange-500 mt-3 font-semibold">
               🥺 {pet.name} is hungry! Feed me please!
+            </p>
+          )}
+          {happiness < 30 && (
+            <p className="font-kid text-berry mt-3 font-semibold">
+              😢 {pet.name} feels lonely. Come play!
             </p>
           )}
         </div>

@@ -11,6 +11,7 @@ import { MeScreen } from './pages/MeScreen'
 import { NavBar } from './components/NavBar'
 import { BgmManager } from './components/BgmManager'
 import { BgmToggle } from './components/BgmToggle'
+import { PetDecayManager } from './components/PetDecayManager'
 
 export default function App() {
   const { onboarded, currentScreen, setScreen } = useGameStore()
@@ -32,6 +33,7 @@ export default function App() {
   return (
     <>
       <BgmManager />
+      <PetDecayManager />
       {!onboarded ? (
         <>
           <OnboardingScreen />

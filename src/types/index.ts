@@ -54,6 +54,7 @@ export interface GameState {
   coins: number
   hunger: number
   happiness: number
+  lastPetDecayAt: number | null
   completedLessons: string[]
   ownedItems: string[]
   foodInventory: Record<string, number>
@@ -74,6 +75,8 @@ export interface GameActions {
   spendCoins: (amount: number) => boolean
   completeLesson: (lessonId: string, reward: number) => void
   feedPet: (foodId: string, hungerBoost: number) => boolean
+  playWithPet: (coinCost: number, happinessBoost: number) => boolean
+  applyPetDecay: () => void
   buyItem: (itemId: string, price: number) => boolean
   equipItem: (itemId: string, category: 'outfit' | 'accessory') => void
   setNarrationSpeed: (speed: number) => void

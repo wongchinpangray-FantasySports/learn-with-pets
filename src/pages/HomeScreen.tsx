@@ -86,6 +86,16 @@ export function HomeScreen() {
             <ProgressBar label="Hunger" value={hunger} emoji="🍽️" color="bg-orange-400" />
             <ProgressBar label="Happiness" value={happiness} emoji="😊" color="bg-berry" />
           </div>
+          {pet && hunger < 30 && (
+            <p className="font-kid text-orange-500 mt-3 font-semibold text-sm">
+              🥺 {pet.name} is hungry — visit Pet to feed!
+            </p>
+          )}
+          {pet && happiness < 30 && (
+            <p className="font-kid text-berry mt-3 font-semibold text-sm">
+              😢 {pet.name} wants to play — visit Pet!
+            </p>
+          )}
         </div>
 
         {/* Quick actions */}
