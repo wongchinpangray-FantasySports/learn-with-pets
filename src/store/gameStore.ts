@@ -18,6 +18,7 @@ const initialState = {
   narrationSpeed: 0.75,
   unlockedTranslations: [] as string[],
   bgmEnabled: true,
+  bgmVolume: 0.28,
   onboarded: false,
   currentScreen: 'onboarding' as Screen,
 }
@@ -144,13 +145,16 @@ export const useGameStore = create<GameStore>()(
 
       setBgmEnabled: (enabled) => set({ bgmEnabled: enabled }),
 
+      setBgmVolume: (volume) =>
+        set({ bgmVolume: Math.max(0, Math.min(1, volume)) }),
+
       setScreen: (screen) => set({ currentScreen: screen }),
 
       resetGame: () => set({ ...initialState, currentScreen: 'onboarding' as Screen }),
     }),
     {
       name: 'bb8-english-save',
-      version: 4,
+      version: 5,
       migrate: (persisted, version) => {
         let state = { ...(persisted as GameStore), currentScreen: (persisted as GameStore).currentScreen ?? 'onboarding' }
         if (version < 2) {
@@ -163,6 +167,9 @@ export const useGameStore = create<GameStore>()(
         }
         if (version < 4) {
           state.bgmEnabled = state.bgmEnabled ?? true
+        }
+        if (version < 5) {
+          state.bgmVolume = state.bgmVolume ?? 0.28
         }
         return state
       },

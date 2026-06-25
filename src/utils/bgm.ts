@@ -4,8 +4,10 @@
  */
 
 const BGM_MP3_PATH = '/audio/bgm.mp3'
-const BASE_VOLUME = 0.28
+export const DEFAULT_BGM_VOLUME = 0.28
 const DUCK_RATIO = 0.18
+
+let volumeLevel = DEFAULT_BGM_VOLUME
 
 type BgmMode = 'mp3' | 'synth' | null
 
@@ -19,13 +21,14 @@ let audioEl: HTMLAudioElement | null = null
 let mp3State: 'idle' | 'loading' | 'ready' | 'missing' = 'idle'
 let mp3LoadPromise: Promise<boolean> | null = null
 
+function effectiveVolume(): number {
+  if (!userAudible) return 0
+  return duckCount > 0 ? volumeLevel * DUCK_RATIO : volumeLevel
+}
+
 function applyMp3Volume(): void {
   if (!audioEl) return
-  if (!userAudible) {
-    audioEl.volume = 0
-    return
-  }
-  audioEl.volume = duckCount > 0 ? BASE_VOLUME * DUCK_RATIO : BASE_VOLUME
+  audioEl.volume = effectiveVolume()
 }
 
 function loadMp3(): Promise<boolean> {
@@ -107,7 +110,7 @@ function ensureSynthContext(): AudioContext | null {
     audioCtx = new Ctx()
     masterGain = audioCtx.createGain()
     musicGain = audioCtx.createGain()
-    masterGain.gain.value = userAudible ? BASE_VOLUME : 0
+    masterGain.gain.value = userAudible ? volumeLevel : 0
     musicGain.gain.value = duckCount > 0 ? DUCK_RATIO : 1
     musicGain.connect(masterGain)
     masterGain.connect(audioCtx.destination)
@@ -240,6 +243,27 @@ export function stopBgm(): void {
   bgmMode = null
 }
 
+export function getBgmVolume(): number {
+  return volumeLevel
+}
+
+export function setBgmVolume(level: number): void {
+  volumeLevel = Math.max(0, Math.min(1, level))
+
+  if (bgmMode === 'mp3') {
+    applyMp3Volume()
+    return
+  }
+
+  if (masterGain && audioCtx) {
+    masterGain.gain.setTargetAtTime(
+      userAudible ? volumeLevel : 0,
+      audioCtx.currentTime,
+      0.08
+    )
+  }
+}
+
 export function setBgmAudible(audible: boolean): void {
   userAudible = audible
 
@@ -249,7 +273,7 @@ export function setBgmAudible(audible: boolean): void {
   }
 
   if (masterGain && audioCtx) {
-    masterGain.gain.setTargetAtTime(audible ? BASE_VOLUME : 0, audioCtx.currentTime, 0.08)
+    masterGain.gain.setTargetAtTime(audible ? volumeLevel : 0, audioCtx.currentTime, 0.08)
   }
 }
 

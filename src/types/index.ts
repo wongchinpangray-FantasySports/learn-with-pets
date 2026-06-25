@@ -62,6 +62,7 @@ export interface GameState {
   narrationSpeed: number
   unlockedTranslations: string[]
   bgmEnabled: boolean
+  bgmVolume: number
   onboarded: boolean
 }
 
@@ -78,6 +79,7 @@ export interface GameActions {
   setNarrationSpeed: (speed: number) => void
   unlockTranslation: (wordKey: string) => boolean
   setBgmEnabled: (enabled: boolean) => void
+  setBgmVolume: (volume: number) => void
   setScreen: (screen: Screen) => void
   resetGame: () => void
 }

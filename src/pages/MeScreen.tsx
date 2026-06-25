@@ -1,4 +1,5 @@
 import { CoinDisplay } from '../components/CoinDisplay'
+import { BgmVolumeControl } from '../components/BgmVolumeControl'
 import { PageShell } from '../components/PageShell'
 import { PetAvatar } from '../components/PetAvatar'
 import { ProgressBar } from '../components/ProgressBar'
@@ -53,6 +54,8 @@ export function MeScreen() {
           Earn coins from lessons and practice!
         </p>
       </div>
+
+      <BgmVolumeControl />
 
       {selectedPet && pet && (
         <div className="bg-white rounded-3xl shadow-lg p-5 mb-5 border-2 border-orange-100">
