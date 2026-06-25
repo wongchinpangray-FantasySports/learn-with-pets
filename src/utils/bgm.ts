@@ -1,6 +1,6 @@
 /**
  * Background music: uses `public/audio/bgm.mp3` when present, else a built-in cute synth loop.
- * See public/audio/README.md for how to add a royalty-free MP3.
+ * MP3 volume is controlled via Web Audio GainNode (required on iOS — HTMLAudioElement.volume is ignored).
  */
 
 const BGM_MP3_PATH = '/audio/bgm.mp3'
@@ -16,96 +16,24 @@ let playing = false
 let userAudible = true
 let duckCount = 0
 
-/** --- MP3 player --- */
-let audioEl: HTMLAudioElement | null = null
-let mp3State: 'idle' | 'loading' | 'ready' | 'missing' = 'idle'
-let mp3LoadPromise: Promise<boolean> | null = null
-
-function effectiveVolume(): number {
-  if (!userAudible) return 0
-  return duckCount > 0 ? volumeLevel * DUCK_RATIO : volumeLevel
-}
-
-function applyMp3Volume(): void {
-  if (!audioEl) return
-  audioEl.volume = effectiveVolume()
-}
-
-function loadMp3(): Promise<boolean> {
-  if (mp3State === 'ready') return Promise.resolve(true)
-  if (mp3State === 'missing') return Promise.resolve(false)
-  if (mp3LoadPromise) return mp3LoadPromise
-
-  mp3LoadPromise = new Promise((resolve) => {
-    mp3State = 'loading'
-    const audio = new Audio(BGM_MP3_PATH)
-    audio.loop = true
-    audio.preload = 'auto'
-
-    const finish = (ok: boolean) => {
-      mp3State = ok ? 'ready' : 'missing'
-      if (ok) {
-        audioEl = audio
-        applyMp3Volume()
-      }
-      mp3LoadPromise = null
-      resolve(ok)
-    }
-
-    audio.addEventListener('canplaythrough', () => finish(true), { once: true })
-    audio.addEventListener('error', () => finish(false), { once: true })
-    audio.load()
-  })
-
-  return mp3LoadPromise
-}
-
-async function startMp3(): Promise<boolean> {
-  const ok = await loadMp3()
-  if (!ok || !audioEl) return false
-  bgmMode = 'mp3'
-  playing = true
-  applyMp3Volume()
-  try {
-    await audioEl.play()
-    return true
-  } catch {
-    playing = false
-    bgmMode = null
-    return false
-  }
-}
-
-function stopMp3(): void {
-  if (!audioEl) return
-  audioEl.pause()
-  audioEl.currentTime = 0
-}
-
-/** --- Synth fallback --- */
+/** Shared Web Audio graph: sources → musicGain (duck) → masterGain (volume/mute) → output */
 let audioCtx: AudioContext | null = null
 let masterGain: GainNode | null = null
 let musicGain: GainNode | null = null
-let tickTimer: ReturnType<typeof setInterval> | null = null
-let step = 0
 
-const BPM = 104
-const BEAT_SEC = 60 / BPM
+/** --- MP3 player --- */
+let audioEl: HTMLAudioElement | null = null
+let mp3MediaConnected = false
+let mp3State: 'idle' | 'loading' | 'ready' | 'missing' = 'idle'
+let mp3LoadPromise: Promise<boolean> | null = null
 
-const CHORDS: number[][] = [
-  [261.63, 329.63, 392.0],
-  [392.0, 493.88, 587.33],
-  [220.0, 261.63, 329.63],
-  [349.23, 440.0, 523.25],
-]
-
-const MELODY = [523.25, 587.33, 659.25, 783.99, 659.25, 587.33, 523.25, 392.0, 440.0, 523.25]
-
-function ensureSynthContext(): AudioContext | null {
+function ensureAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null
 
   if (!audioCtx) {
-    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    const Ctx =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     if (!Ctx) return null
     audioCtx = new Ctx()
     masterGain = audioCtx.createGain()
@@ -122,6 +50,135 @@ function ensureSynthContext(): AudioContext | null {
 
   return audioCtx
 }
+
+function resumeAudioContext(): void {
+  if (audioCtx?.state === 'suspended') {
+    void audioCtx.resume()
+  }
+}
+
+function applyMasterVolume(): void {
+  if (!masterGain || !audioCtx) return
+  resumeAudioContext()
+  masterGain.gain.setTargetAtTime(
+    userAudible ? volumeLevel : 0,
+    audioCtx.currentTime,
+    0.05
+  )
+}
+
+function applyDuckVolume(): void {
+  if (!musicGain || !audioCtx) return
+  resumeAudioContext()
+  musicGain.gain.setTargetAtTime(
+    duckCount > 0 ? DUCK_RATIO : 1,
+    audioCtx.currentTime,
+    duckCount > 0 ? 0.12 : 0.2
+  )
+}
+
+/** Fallback when MediaElementSource is unavailable (desktop-only path). */
+function applyMp3VolumeFallback(): void {
+  if (!audioEl || mp3MediaConnected) return
+  audioEl.volume = userAudible
+    ? duckCount > 0
+      ? volumeLevel * DUCK_RATIO
+      : volumeLevel
+    : 0
+}
+
+function connectMp3ToAudioGraph(): void {
+  if (mp3MediaConnected || !audioEl) return
+  if (!ensureAudioContext() || !musicGain) return
+
+  try {
+    const source = audioCtx!.createMediaElementSource(audioEl)
+    source.connect(musicGain)
+    mp3MediaConnected = true
+    audioEl.volume = 1
+    applyMasterVolume()
+    applyDuckVolume()
+  } catch {
+    mp3MediaConnected = false
+  }
+}
+
+function loadMp3(): Promise<boolean> {
+  if (mp3State === 'ready') return Promise.resolve(true)
+  if (mp3State === 'missing') return Promise.resolve(false)
+  if (mp3LoadPromise) return mp3LoadPromise
+
+  mp3LoadPromise = new Promise((resolve) => {
+    mp3State = 'loading'
+    const audio = new Audio(BGM_MP3_PATH)
+    audio.loop = true
+    audio.preload = 'auto'
+    audio.setAttribute('playsinline', 'true')
+
+    const finish = (ok: boolean) => {
+      mp3State = ok ? 'ready' : 'missing'
+      if (ok) {
+        audioEl = audio
+        connectMp3ToAudioGraph()
+        if (!mp3MediaConnected) applyMp3VolumeFallback()
+      }
+      mp3LoadPromise = null
+      resolve(ok)
+    }
+
+    audio.addEventListener('canplaythrough', () => finish(true), { once: true })
+    audio.addEventListener('error', () => finish(false), { once: true })
+    audio.load()
+  })
+
+  return mp3LoadPromise
+}
+
+async function startMp3(): Promise<boolean> {
+  const ok = await loadMp3()
+  if (!ok || !audioEl) return false
+
+  ensureAudioContext()
+  connectMp3ToAudioGraph()
+  applyMasterVolume()
+  applyDuckVolume()
+  if (!mp3MediaConnected) applyMp3VolumeFallback()
+
+  bgmMode = 'mp3'
+  playing = true
+
+  try {
+    resumeAudioContext()
+    await audioEl.play()
+    return true
+  } catch {
+    playing = false
+    bgmMode = null
+    return false
+  }
+}
+
+function stopMp3(): void {
+  if (!audioEl) return
+  audioEl.pause()
+  audioEl.currentTime = 0
+}
+
+/** --- Synth fallback --- */
+let tickTimer: ReturnType<typeof setInterval> | null = null
+let step = 0
+
+const BPM = 104
+const BEAT_SEC = 60 / BPM
+
+const CHORDS: number[][] = [
+  [261.63, 329.63, 392.0],
+  [392.0, 493.88, 587.33],
+  [220.0, 261.63, 329.63],
+  [349.23, 440.0, 523.25],
+]
+
+const MELODY = [523.25, 587.33, 659.25, 783.99, 659.25, 587.33, 523.25, 392.0, 440.0, 523.25]
 
 function playPluck(freq: number, time: number, volume = 0.35) {
   if (!audioCtx || !musicGain) return
@@ -196,7 +253,9 @@ function synthTick() {
 }
 
 function startSynth(): boolean {
-  if (!ensureSynthContext()) return false
+  if (!ensureAudioContext()) return false
+  applyMasterVolume()
+  applyDuckVolume()
   bgmMode = 'synth'
   playing = true
   step = 0
@@ -220,7 +279,7 @@ async function beginBgm(): Promise<void> {
   startSynth()
 }
 
-/** --- Public API (unchanged for the rest of the app) --- */
+/** --- Public API --- */
 
 export function isBgmPlaying(): boolean {
   return playing
@@ -249,57 +308,42 @@ export function getBgmVolume(): number {
 
 export function setBgmVolume(level: number): void {
   volumeLevel = Math.max(0, Math.min(1, level))
-
-  if (bgmMode === 'mp3') {
-    applyMp3Volume()
-    return
-  }
-
-  if (masterGain && audioCtx) {
-    masterGain.gain.setTargetAtTime(
-      userAudible ? volumeLevel : 0,
-      audioCtx.currentTime,
-      0.08
-    )
+  applyMasterVolume()
+  if (bgmMode === 'mp3' && !mp3MediaConnected) {
+    applyMp3VolumeFallback()
   }
 }
 
 export function setBgmAudible(audible: boolean): void {
   userAudible = audible
-
-  if (bgmMode === 'mp3') {
-    applyMp3Volume()
-    return
-  }
-
-  if (masterGain && audioCtx) {
-    masterGain.gain.setTargetAtTime(audible ? volumeLevel : 0, audioCtx.currentTime, 0.08)
+  applyMasterVolume()
+  if (bgmMode === 'mp3' && !mp3MediaConnected) {
+    applyMp3VolumeFallback()
   }
 }
 
 export function duckBgm(): void {
   duckCount++
-  if (bgmMode === 'mp3') {
-    applyMp3Volume()
-    return
-  }
-  if (audioCtx && musicGain) {
-    musicGain.gain.setTargetAtTime(DUCK_RATIO, audioCtx.currentTime, 0.12)
+  applyDuckVolume()
+  if (bgmMode === 'mp3' && !mp3MediaConnected) {
+    applyMp3VolumeFallback()
   }
 }
 
 export function unduckBgm(): void {
   duckCount = Math.max(0, duckCount - 1)
-  if (bgmMode === 'mp3') {
-    applyMp3Volume()
-    return
-  }
-  if (audioCtx && musicGain && duckCount === 0) {
-    musicGain.gain.setTargetAtTime(1, audioCtx.currentTime, 0.2)
+  applyDuckVolume()
+  if (bgmMode === 'mp3' && !mp3MediaConnected) {
+    applyMp3VolumeFallback()
   }
 }
 
 export function unlockBgmAudio(): void {
-  ensureSynthContext()
-  void loadMp3()
+  ensureAudioContext()
+  void loadMp3().then((ok) => {
+    if (ok) {
+      connectMp3ToAudioGraph()
+      applyMasterVolume()
+    }
+  })
 }

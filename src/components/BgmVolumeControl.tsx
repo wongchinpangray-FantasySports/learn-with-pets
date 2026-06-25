@@ -1,3 +1,4 @@
+import { type ChangeEvent } from 'react'
 import { useGameStore } from '../store/gameStore'
 import {
   unlockBgmAudio,
@@ -48,6 +49,10 @@ export function BgmVolumeControl() {
     }
   }
 
+  const onSliderChange = (e: ChangeEvent<HTMLInputElement>) => {
+    handleVolumeChange(parseFloat(e.target.value))
+  }
+
   return (
     <div className="bg-white rounded-3xl shadow-lg p-5 mb-5 border-2 border-sky-100">
       <div className="flex items-center justify-between mb-4">
@@ -68,7 +73,7 @@ export function BgmVolumeControl() {
         </button>
       </div>
 
-      <div className={`${bgmEnabled ? '' : 'opacity-50'}`}>
+      <div className={bgmEnabled ? '' : 'opacity-70'}>
         <div className="flex items-center justify-between mb-2">
           <span className="font-kid text-sm font-semibold text-gray-700">Volume</span>
           <span className="font-kid text-xs text-sky-700 font-medium">
@@ -81,9 +86,13 @@ export function BgmVolumeControl() {
           max={1}
           step={0.05}
           value={bgmVolume}
-          onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-          disabled={!bgmEnabled}
-          className="w-full h-3 rounded-full appearance-none cursor-pointer accent-sky-500 disabled:cursor-not-allowed"
+          onInput={onSliderChange}
+          onChange={onSliderChange}
+          className="w-full h-4 rounded-full appearance-none cursor-pointer accent-sky-500 bg-gray-200
+            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:w-7
+            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-sky-500
+            [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white
+            [&::-webkit-slider-thumb]:shadow-md"
           aria-label="Background music volume"
         />
         <div className="flex justify-between font-kid text-xs text-gray-400 mt-1">
