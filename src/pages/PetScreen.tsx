@@ -127,6 +127,16 @@ export function PetScreen() {
           )}
         </div>
 
+        <div className="bg-white rounded-3xl shadow-lg p-5 mb-4 border-2 border-berry/20">
+          <h3 className="font-kid font-bold text-lg text-gray-700 mb-1">
+            🎮 Play with {pet.name}
+          </h3>
+          <p className="font-kid text-xs text-gray-500 mb-4">
+            Sports, party games & table games — scroll down to feed snacks
+          </p>
+          <PlayGamePicker coins={coins} onSelect={handleSelectGame} />
+        </div>
+
         <div className="bg-white rounded-3xl shadow-lg p-5 mb-4 border-2 border-gray-100">
           <h3 className="font-kid font-bold text-lg text-gray-700 mb-4">
             🍎 Feed {pet.name}
@@ -161,16 +171,6 @@ export function PetScreen() {
               })}
             </div>
           )}
-        </div>
-
-        <div className="bg-white rounded-3xl shadow-lg p-5 border-2 border-gray-100">
-          <h3 className="font-kid font-bold text-lg text-gray-700 mb-1">
-            🎾 Play with {pet.name}
-          </h3>
-          <p className="font-kid text-xs text-gray-500 mb-4">
-            Pick a game — sports, party games, or table games!
-          </p>
-          <PlayGamePicker coins={coins} onSelect={handleSelectGame} />
         </div>
     </PageShell>
   )

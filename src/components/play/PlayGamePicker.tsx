@@ -47,7 +47,7 @@ export function PlayGamePicker({ coins, onSelect }: PlayGamePickerProps) {
             <button
               key={game.id}
               type="button"
-              onClick={() => canAfford && onSelect(game)}
+              onClick={() => onSelect(game)}
               disabled={!canAfford}
               className={`
                 text-left rounded-2xl border-2 p-3 transition-all font-kid
@@ -65,6 +65,12 @@ export function PlayGamePicker({ coins, onSelect }: PlayGamePickerProps) {
           )
         })}
       </div>
+
+      {coins < 2 && (
+        <p className="font-kid text-xs text-orange-600 text-center mt-3 font-semibold">
+          Need 2 🪙 to play — finish a Learn lesson to earn coins!
+        </p>
+      )}
     </div>
   )
 }

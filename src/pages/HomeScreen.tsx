@@ -120,9 +120,9 @@ export function HomeScreen() {
             onClick={() => setScreen('pet')}
             className="bg-gradient-to-br from-orange-300 to-orange-400 text-white rounded-3xl p-5 shadow-lg active:scale-95 transition-transform font-kid"
           >
-            <div className="text-4xl mb-2">🐾</div>
-            <div className="font-bold text-lg">My Pet</div>
-            <div className="text-sm opacity-90">Feed & play!</div>
+            <div className="text-4xl mb-2">🎮</div>
+            <div className="font-bold text-lg">Pet Games</div>
+            <div className="text-sm opacity-90">6 mini-games!</div>
           </button>
           <button
             onClick={() => setScreen('shop')}

@@ -80,7 +80,7 @@ export function MeScreen() {
               size="md"
               className="w-full mt-4"
             >
-              Feed & Play with {pet.name}
+              🎮 Play games & feed {pet.name}
             </BigButton>
           </div>
         </div>
