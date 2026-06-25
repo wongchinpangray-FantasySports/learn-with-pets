@@ -5,7 +5,7 @@ import {
   startBgm,
   setBgmAudible,
   setBgmVolume,
-  isBgmPlaying,
+  isBgmActive,
 } from '../utils/bgm'
 
 function volumeLabel(volume: number): string {
@@ -26,7 +26,7 @@ export function BgmVolumeControl() {
     unlockBgmAudio()
     setBgmEnabled(next)
     setBgmAudible(next)
-    if (next && !isBgmPlaying()) {
+    if (next && !isBgmActive()) {
       startBgm()
     }
   }
@@ -35,15 +35,11 @@ export function BgmVolumeControl() {
     unlockBgmAudio()
     setStoredVolume(value)
     setBgmVolume(value)
-    if (value > 0 && !bgmEnabled) {
-      setBgmEnabled(true)
+    if (value > 0) {
+      if (!bgmEnabled) setBgmEnabled(true)
       setBgmAudible(true)
-      if (!isBgmPlaying()) {
-        startBgm()
-      }
-      return
-    }
-    if (value === 0 && bgmEnabled) {
+      if (!isBgmActive()) startBgm()
+    } else {
       setBgmEnabled(false)
       setBgmAudible(false)
     }
@@ -86,6 +82,7 @@ export function BgmVolumeControl() {
           max={1}
           step={0.05}
           value={bgmVolume}
+          onPointerDown={() => unlockBgmAudio()}
           onInput={onSliderChange}
           onChange={onSliderChange}
           className="w-full h-4 rounded-full appearance-none cursor-pointer accent-sky-500 bg-gray-200

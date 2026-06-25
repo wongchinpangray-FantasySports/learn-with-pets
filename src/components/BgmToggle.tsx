@@ -1,5 +1,5 @@
 import { useGameStore } from '../store/gameStore'
-import { unlockBgmAudio, startBgm, setBgmAudible, isBgmPlaying } from '../utils/bgm'
+import { unlockBgmAudio, startBgm, setBgmAudible, isBgmActive } from '../utils/bgm'
 
 export function BgmToggle({ className = '' }: { className?: string }) {
   const { bgmEnabled, setBgmEnabled } = useGameStore()
@@ -9,7 +9,7 @@ export function BgmToggle({ className = '' }: { className?: string }) {
     unlockBgmAudio()
     setBgmEnabled(next)
     setBgmAudible(next)
-    if (next && !isBgmPlaying()) {
+    if (next && !isBgmActive()) {
       startBgm()
     }
   }

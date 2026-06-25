@@ -1,6 +1,6 @@
 /**
- * Background music: uses `public/audio/bgm.mp3` when present, else a built-in cute synth loop.
- * MP3 volume is controlled via Web Audio GainNode (required on iOS — HTMLAudioElement.volume is ignored).
+ * Background music: decodes `public/audio/bgm.mp3` and plays via Web Audio (works on iOS).
+ * Falls back to a built-in synth loop if the MP3 is missing.
  */
 
 const BGM_MP3_PATH = '/audio/bgm.mp3'
@@ -12,18 +12,18 @@ let volumeLevel = DEFAULT_BGM_VOLUME
 type BgmMode = 'mp3' | 'synth' | null
 
 let bgmMode: BgmMode = null
+/** User has started BGM (may be muted via userAudible). */
 let playing = false
 let userAudible = true
 let duckCount = 0
 
-/** Shared Web Audio graph: sources → musicGain (duck) → masterGain (volume/mute) → output */
 let audioCtx: AudioContext | null = null
 let masterGain: GainNode | null = null
 let musicGain: GainNode | null = null
 
-/** --- MP3 player --- */
-let audioEl: HTMLAudioElement | null = null
-let mp3MediaConnected = false
+/** --- MP3 via decoded buffer (reliable volume/mute on mobile) --- */
+let mp3Buffer: AudioBuffer | null = null
+let mp3BufferSource: AudioBufferSourceNode | null = null
 let mp3State: 'idle' | 'loading' | 'ready' | 'missing' = 'idle'
 let mp3LoadPromise: Promise<boolean> | null = null
 
@@ -44,124 +44,135 @@ function ensureAudioContext(): AudioContext | null {
     masterGain.connect(audioCtx.destination)
   }
 
-  if (audioCtx.state === 'suspended') {
-    void audioCtx.resume()
-  }
-
   return audioCtx
 }
 
-function resumeAudioContext(): void {
+async function resumeAudioContext(): Promise<void> {
   if (audioCtx?.state === 'suspended') {
-    void audioCtx.resume()
+    try {
+      await audioCtx.resume()
+    } catch {
+      /* ignore */
+    }
   }
 }
 
 function applyMasterVolume(): void {
   if (!masterGain || !audioCtx) return
-  resumeAudioContext()
-  masterGain.gain.setTargetAtTime(
-    userAudible ? volumeLevel : 0,
-    audioCtx.currentTime,
-    0.05
-  )
+  masterGain.gain.cancelScheduledValues(audioCtx.currentTime)
+  masterGain.gain.value = userAudible ? volumeLevel : 0
 }
 
 function applyDuckVolume(): void {
   if (!musicGain || !audioCtx) return
-  resumeAudioContext()
-  musicGain.gain.setTargetAtTime(
-    duckCount > 0 ? DUCK_RATIO : 1,
-    audioCtx.currentTime,
-    duckCount > 0 ? 0.12 : 0.2
-  )
+  musicGain.gain.cancelScheduledValues(audioCtx.currentTime)
+  musicGain.gain.value = duckCount > 0 ? DUCK_RATIO : 1
 }
 
-/** Fallback when MediaElementSource is unavailable (desktop-only path). */
-function applyMp3VolumeFallback(): void {
-  if (!audioEl || mp3MediaConnected) return
-  audioEl.volume = userAudible
-    ? duckCount > 0
-      ? volumeLevel * DUCK_RATIO
-      : volumeLevel
-    : 0
-}
-
-function connectMp3ToAudioGraph(): void {
-  if (mp3MediaConnected || !audioEl) return
-  if (!ensureAudioContext() || !musicGain) return
-
+function stopMp3Source(): void {
+  if (!mp3BufferSource) return
   try {
-    const source = audioCtx!.createMediaElementSource(audioEl)
-    source.connect(musicGain)
-    mp3MediaConnected = true
-    audioEl.volume = 1
-    applyMasterVolume()
-    applyDuckVolume()
+    mp3BufferSource.stop()
   } catch {
-    mp3MediaConnected = false
+    /* already stopped */
   }
+  try {
+    mp3BufferSource.disconnect()
+  } catch {
+    /* ignore */
+  }
+  mp3BufferSource = null
 }
 
-function loadMp3(): Promise<boolean> {
-  if (mp3State === 'ready') return Promise.resolve(true)
-  if (mp3State === 'missing') return Promise.resolve(false)
+async function loadMp3Buffer(): Promise<boolean> {
+  if (mp3Buffer) return true
+  if (mp3State === 'missing') return false
   if (mp3LoadPromise) return mp3LoadPromise
 
-  mp3LoadPromise = new Promise((resolve) => {
-    mp3State = 'loading'
-    const audio = new Audio(BGM_MP3_PATH)
-    audio.loop = true
-    audio.preload = 'auto'
-    audio.setAttribute('playsinline', 'true')
-
-    const finish = (ok: boolean) => {
-      mp3State = ok ? 'ready' : 'missing'
-      if (ok) {
-        audioEl = audio
-        connectMp3ToAudioGraph()
-        if (!mp3MediaConnected) applyMp3VolumeFallback()
+  mp3LoadPromise = (async () => {
+    try {
+      const ctx = ensureAudioContext()
+      if (!ctx) {
+        mp3State = 'missing'
+        return false
       }
-      mp3LoadPromise = null
-      resolve(ok)
-    }
+      await resumeAudioContext()
 
-    audio.addEventListener('canplaythrough', () => finish(true), { once: true })
-    audio.addEventListener('error', () => finish(false), { once: true })
-    audio.load()
-  })
+      const res = await fetch(BGM_MP3_PATH)
+      if (!res.ok) {
+        mp3State = 'missing'
+        return false
+      }
+
+      const data = await res.arrayBuffer()
+      mp3Buffer = await ctx.decodeAudioData(data)
+      mp3State = 'ready'
+      return true
+    } catch {
+      mp3State = 'missing'
+      return false
+    } finally {
+      mp3LoadPromise = null
+    }
+  })()
 
   return mp3LoadPromise
 }
 
-async function startMp3(): Promise<boolean> {
-  const ok = await loadMp3()
-  if (!ok || !audioEl) return false
+async function startMp3Source(): Promise<boolean> {
+  if (!mp3Buffer || !audioCtx || !musicGain) return false
 
-  ensureAudioContext()
-  connectMp3ToAudioGraph()
-  applyMasterVolume()
-  applyDuckVolume()
-  if (!mp3MediaConnected) applyMp3VolumeFallback()
+  stopMp3Source()
 
-  bgmMode = 'mp3'
-  playing = true
+  if (!userAudible) return true
+
+  const source = audioCtx.createBufferSource()
+  source.buffer = mp3Buffer
+  source.loop = true
+  source.connect(musicGain)
 
   try {
-    resumeAudioContext()
-    await audioEl.play()
+    await resumeAudioContext()
+    source.start(0)
+    mp3BufferSource = source
     return true
   } catch {
-    playing = false
-    bgmMode = null
+    source.disconnect()
     return false
   }
 }
 
+async function syncMp3Playback(): Promise<void> {
+  if (bgmMode !== 'mp3' || !playing) return
+
+  applyMasterVolume()
+
+  if (!userAudible) {
+    stopMp3Source()
+    return
+  }
+
+  if (!mp3BufferSource && mp3Buffer) {
+    await startMp3Source()
+  }
+}
+
+async function startMp3(): Promise<boolean> {
+  const ok = await loadMp3Buffer()
+  if (!ok || !mp3Buffer) return false
+
+  ensureAudioContext()
+  applyMasterVolume()
+  applyDuckVolume()
+
+  bgmMode = 'mp3'
+  playing = true
+
+  return syncMp3Playback().then(() => true)
+}
+
 function stopMp3(): void {
-  if (!audioEl) return
-  audioEl.pause()
-  audioEl.currentTime = 0
+  stopMp3Source()
 }
 
 /** --- Synth fallback --- */
@@ -235,7 +246,7 @@ function playShaker(time: number) {
 }
 
 function synthTick() {
-  if (!audioCtx || !playing || bgmMode !== 'synth') return
+  if (!audioCtx || !playing || bgmMode !== 'synth' || !userAudible) return
   const now = audioCtx.currentTime + 0.05
   const beatInBar = step % 8
   const bar = Math.floor(step / 8)
@@ -271,7 +282,10 @@ function stopSynth(): void {
 }
 
 async function beginBgm(): Promise<void> {
-  if (playing) return
+  if (playing) {
+    await syncMp3Playback()
+    return
+  }
 
   const mp3Ok = await startMp3()
   if (mp3Ok) return
@@ -282,6 +296,10 @@ async function beginBgm(): Promise<void> {
 /** --- Public API --- */
 
 export function isBgmPlaying(): boolean {
+  return playing && userAudible
+}
+
+export function isBgmActive(): boolean {
   return playing
 }
 
@@ -290,13 +308,13 @@ export function usesMp3Bgm(): boolean {
 }
 
 export function startBgm(): boolean {
-  if (playing) return true
   void beginBgm()
   return true
 }
 
 export function stopBgm(): void {
   playing = false
+  userAudible = true
   stopMp3()
   stopSynth()
   bgmMode = null
@@ -309,41 +327,27 @@ export function getBgmVolume(): number {
 export function setBgmVolume(level: number): void {
   volumeLevel = Math.max(0, Math.min(1, level))
   applyMasterVolume()
-  if (bgmMode === 'mp3' && !mp3MediaConnected) {
-    applyMp3VolumeFallback()
-  }
 }
 
 export function setBgmAudible(audible: boolean): void {
   userAudible = audible
   applyMasterVolume()
-  if (bgmMode === 'mp3' && !mp3MediaConnected) {
-    applyMp3VolumeFallback()
-  }
+  applyDuckVolume()
+  void syncMp3Playback()
 }
 
 export function duckBgm(): void {
   duckCount++
   applyDuckVolume()
-  if (bgmMode === 'mp3' && !mp3MediaConnected) {
-    applyMp3VolumeFallback()
-  }
 }
 
 export function unduckBgm(): void {
   duckCount = Math.max(0, duckCount - 1)
   applyDuckVolume()
-  if (bgmMode === 'mp3' && !mp3MediaConnected) {
-    applyMp3VolumeFallback()
-  }
 }
 
 export function unlockBgmAudio(): void {
   ensureAudioContext()
-  void loadMp3().then((ok) => {
-    if (ok) {
-      connectMp3ToAudioGraph()
-      applyMasterVolume()
-    }
-  })
+  void resumeAudioContext()
+  void loadMp3Buffer()
 }

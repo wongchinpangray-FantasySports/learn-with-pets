@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useGameStore } from '../store/gameStore'
-import { startBgm, stopBgm, setBgmAudible, setBgmVolume, unlockBgmAudio, isBgmPlaying } from '../utils/bgm'
+import { startBgm, stopBgm, setBgmAudible, setBgmVolume, unlockBgmAudio, isBgmActive } from '../utils/bgm'
 
 /** Starts BGM after first tap; keeps in sync with mute preference. */
 export function BgmManager() {
@@ -15,8 +15,8 @@ export function BgmManager() {
   useEffect(() => {
     setBgmAudible(bgmEnabled)
     if (!bgmEnabled) return
-    if (startedRef.current && isBgmPlaying()) return
-    if (startedRef.current) {
+    if (!startedRef.current) return
+    if (!isBgmActive()) {
       startBgm()
     }
   }, [bgmEnabled])
