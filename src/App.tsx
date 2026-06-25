@@ -9,6 +9,8 @@ import { ShopScreen } from './pages/ShopScreen'
 import { PetScreen } from './pages/PetScreen'
 import { MeScreen } from './pages/MeScreen'
 import { NavBar } from './components/NavBar'
+import { BgmManager } from './components/BgmManager'
+import { BgmToggle } from './components/BgmToggle'
 
 export default function App() {
   const { onboarded, currentScreen, setScreen } = useGameStore()
@@ -16,10 +18,6 @@ export default function App() {
   useEffect(() => {
     loadVoices()
   }, [])
-
-  if (!onboarded) {
-    return <OnboardingScreen />
-  }
 
   const screens = {
     home: <HomeScreen />,
@@ -32,9 +30,21 @@ export default function App() {
   }
 
   return (
-    <div className="font-kid">
-      {screens[currentScreen]}
-      <NavBar current={currentScreen} onNavigate={setScreen} />
-    </div>
+    <>
+      <BgmManager />
+      {!onboarded ? (
+        <>
+          <OnboardingScreen />
+          <div className="fixed bottom-6 left-4 z-50">
+            <BgmToggle />
+          </div>
+        </>
+      ) : (
+        <div className="font-kid">
+          {screens[currentScreen]}
+          <NavBar current={currentScreen} onNavigate={setScreen} />
+        </div>
+      )}
+    </>
   )
 }

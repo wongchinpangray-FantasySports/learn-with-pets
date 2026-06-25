@@ -17,6 +17,7 @@ const initialState = {
   equippedAccessory: null as string | null,
   narrationSpeed: 0.75,
   unlockedTranslations: [] as string[],
+  bgmEnabled: true,
   onboarded: false,
   currentScreen: 'onboarding' as Screen,
 }
@@ -141,13 +142,15 @@ export const useGameStore = create<GameStore>()(
         return true
       },
 
+      setBgmEnabled: (enabled) => set({ bgmEnabled: enabled }),
+
       setScreen: (screen) => set({ currentScreen: screen }),
 
       resetGame: () => set({ ...initialState, currentScreen: 'onboarding' as Screen }),
     }),
     {
       name: 'bb8-english-save',
-      version: 3,
+      version: 4,
       migrate: (persisted, version) => {
         let state = { ...(persisted as GameStore), currentScreen: (persisted as GameStore).currentScreen ?? 'onboarding' }
         if (version < 2) {
@@ -157,6 +160,9 @@ export const useGameStore = create<GameStore>()(
         }
         if (version < 3) {
           state.unlockedTranslations = state.unlockedTranslations ?? []
+        }
+        if (version < 4) {
+          state.bgmEnabled = state.bgmEnabled ?? true
         }
         return state
       },

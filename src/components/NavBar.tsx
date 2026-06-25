@@ -1,5 +1,6 @@
 import { Screen } from '../types'
 import { VoiceBadge } from './VoiceBadge'
+import { BgmToggle } from './BgmToggle'
 
 interface NavBarProps {
   current: Screen
@@ -23,7 +24,8 @@ export function NavBar({ current, onNavigate }: NavBarProps) {
       aria-label="Main navigation"
     >
       <div className="max-w-lg mx-auto">
-        <div className="flex justify-end px-2 pt-1 pb-0.5">
+        <div className="flex justify-between items-center px-2 pt-1 pb-0.5">
+          <BgmToggle />
           <VoiceBadge />
         </div>
         <div className="grid grid-cols-6 gap-0 px-1 pb-1">

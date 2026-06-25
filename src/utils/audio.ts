@@ -1,4 +1,5 @@
 import { isCloudTtsAvailable, playCloudTts, stopCloudAudio } from './cloudTts'
+import { duckBgm, unduckBgm } from './bgm'
 import { useGameStore } from '../store/gameStore'
 
 let synth: SpeechSynthesis | null = null
@@ -137,20 +138,27 @@ async function speakWithCloudFallback(
 
   const speakId = ++activeSpeakId
   stopSpeaking()
+  duckBgm()
 
   const speed = getEffectiveRate(style, rate)
 
-  if (await isCloudTtsAvailable()) {
-    try {
-      await playCloudTts(trimmed, style, speed)
-      if (speakId === activeSpeakId) return
-    } catch {
-      if (speakId !== activeSpeakId) return
+  try {
+    if (await isCloudTtsAvailable()) {
+      try {
+        await playCloudTts(trimmed, style, speed)
+        if (speakId === activeSpeakId) return
+      } catch {
+        if (speakId !== activeSpeakId) return
+      }
+    }
+
+    if (speakId !== activeSpeakId) return
+    await speakBrowser(trimmed, style, speed)
+  } finally {
+    if (speakId === activeSpeakId) {
+      unduckBgm()
     }
   }
-
-  if (speakId !== activeSpeakId) return
-  return speakBrowser(trimmed, style, speed)
 }
 
 function speakBrowser(text: string, style: SpeakStyle, rate: number): Promise<void> {
@@ -189,6 +197,7 @@ export function stopSpeaking(): void {
   activeSpeakId++
   getSynth()?.cancel()
   stopCloudAudio()
+  unduckBgm()
 }
 
 export { isCloudTtsAvailable }

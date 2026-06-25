@@ -61,6 +61,7 @@ export interface GameState {
   equippedAccessory: string | null
   narrationSpeed: number
   unlockedTranslations: string[]
+  bgmEnabled: boolean
   onboarded: boolean
 }
 
@@ -76,6 +77,7 @@ export interface GameActions {
   equipItem: (itemId: string, category: 'outfit' | 'accessory') => void
   setNarrationSpeed: (speed: number) => void
   unlockTranslation: (wordKey: string) => boolean
+  setBgmEnabled: (enabled: boolean) => void
   setScreen: (screen: Screen) => void
   resetGame: () => void
 }
