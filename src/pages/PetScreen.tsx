@@ -3,8 +3,10 @@ import { PetAvatar } from '../components/PetAvatar'
 import { ProgressBar } from '../components/ProgressBar'
 import { CoinDisplay } from '../components/CoinDisplay'
 import { PageShell } from '../components/PageShell'
-import { BigButton } from '../components/BigButton'
+import { PlayGamePicker } from '../components/play/PlayGamePicker'
+import { PlayGameHost } from '../components/play/PlayGameHost'
 import { getPetById, SHOP_ITEMS, FOOD_HUNGER } from '../data/content'
+import type { PlayGameDefinition } from '../data/playGames'
 import { useGameStore } from '../store/gameStore'
 
 export function PetScreen() {
@@ -17,11 +19,13 @@ export function PetScreen() {
     equippedOutfit,
     equippedAccessory,
     feedPet,
-    playWithPet,
+    spendCoins,
+    boostHappiness,
   } = useGameStore()
 
   const [message, setMessage] = useState('')
   const [petReaction, setPetReaction] = useState('')
+  const [activeGame, setActiveGame] = useState<PlayGameDefinition | null>(null)
 
   const pet = selectedPet ? getPetById(selectedPet) : null
   const ownedFood = SHOP_ITEMS.filter(
@@ -47,16 +51,40 @@ export function PetScreen() {
     }
   }
 
-  const handlePlay = () => {
-    const success = playWithPet(2, 15)
-    if (success) {
-      showMessage('Wheee! That was fun! 🎾', '🎾')
-    } else {
-      showMessage('Need 2 coins to play! Earn more from lessons! 🪙', '😢')
+  const handleSelectGame = (game: PlayGameDefinition) => {
+    if (coins < game.coinCost) {
+      showMessage('Need more coins! Earn some from lessons! 🪙', '😢')
+      return
     }
+    if (!spendCoins(game.coinCost)) {
+      showMessage('Need more coins! Earn some from lessons! 🪙', '😢')
+      return
+    }
+    setActiveGame(game)
+  }
+
+  const handleGameComplete = (happiness: number) => {
+    boostHappiness(happiness)
+    showMessage(`+${happiness} happiness! Great game! 🎉`, '😊')
+  }
+
+  const handleGameClose = () => {
+    setActiveGame(null)
   }
 
   if (!selectedPet || !pet) return null
+
+  if (activeGame) {
+    return (
+      <PlayGameHost
+        game={activeGame}
+        petId={selectedPet}
+        petName={pet.name}
+        onComplete={handleGameComplete}
+        onCancel={handleGameClose}
+      />
+    )
+  }
 
   return (
     <PageShell className="bg-gradient-to-b from-orange-50 to-white">
@@ -136,12 +164,13 @@ export function PetScreen() {
         </div>
 
         <div className="bg-white rounded-3xl shadow-lg p-5 border-2 border-gray-100">
-          <h3 className="font-kid font-bold text-lg text-gray-700 mb-4">
+          <h3 className="font-kid font-bold text-lg text-gray-700 mb-1">
             🎾 Play with {pet.name}
           </h3>
-          <BigButton onClick={handlePlay} variant="primary" size="lg" className="w-full">
-            Play! (2 🪙)
-          </BigButton>
+          <p className="font-kid text-xs text-gray-500 mb-4">
+            Pick a game — sports, party games, or table games!
+          </p>
+          <PlayGamePicker coins={coins} onSelect={handleSelectGame} />
         </div>
     </PageShell>
   )

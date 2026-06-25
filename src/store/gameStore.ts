@@ -114,6 +114,9 @@ export const useGameStore = create<GameStore>()(
         return true
       },
 
+      boostHappiness: (amount) =>
+        set((s) => ({ happiness: clampPetStat(s.happiness + amount) })),
+
       applyPetDecay: () => {
         const state = get()
         if (!state.onboarded || !state.selectedPet) return

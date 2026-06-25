@@ -76,6 +76,7 @@ export interface GameActions {
   completeLesson: (lessonId: string, reward: number) => void
   feedPet: (foodId: string, hungerBoost: number) => boolean
   playWithPet: (coinCost: number, happinessBoost: number) => boolean
+  boostHappiness: (amount: number) => void
   applyPetDecay: () => void
   buyItem: (itemId: string, price: number) => boolean
   equipItem: (itemId: string, category: 'outfit' | 'accessory') => void
