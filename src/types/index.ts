@@ -14,9 +14,9 @@ export type HomeCountryId =
   | 'br'
   | 'in'
   | 'ae'
-  | 'us'
-  | 'uk'
-  | 'au'
+  | 'th'
+  | 'id'
+  | 'vn'
   | 'other'
 
 export type Screen =

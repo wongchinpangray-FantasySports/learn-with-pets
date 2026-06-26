@@ -203,7 +203,7 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: 'bb8-english-save',
-      version: 8,
+      version: 9,
       migrate: (persisted, version) => {
         let state = { ...(persisted as GameStore), currentScreen: (persisted as GameStore).currentScreen ?? 'onboarding' }
         if (version < 2) {
@@ -231,6 +231,12 @@ export const useGameStore = create<GameStore>()(
         }
         if (version < 8) {
           state.homeCountry = state.homeCountry ?? 'cn'
+        }
+        if (version < 9) {
+          const legacyEnglishSpeaking = ['us', 'uk', 'au'] as const
+          if (legacyEnglishSpeaking.includes(state.homeCountry as (typeof legacyEnglishSpeaking)[number])) {
+            state.homeCountry = 'other'
+          }
         }
         return state
       },

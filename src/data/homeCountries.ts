@@ -9,6 +9,9 @@ export type TranslationLocale =
   | 'pt'
   | 'hi'
   | 'ar'
+  | 'th'
+  | 'id'
+  | 'vi'
   | 'none'
 
 export type HomeCountryId =
@@ -25,9 +28,9 @@ export type HomeCountryId =
   | 'br'
   | 'in'
   | 'ae'
-  | 'us'
-  | 'uk'
-  | 'au'
+  | 'th'
+  | 'id'
+  | 'vn'
   | 'other'
 
 export interface HomeCountryOption {
@@ -51,9 +54,9 @@ export const HOME_COUNTRIES: HomeCountryOption[] = [
   { id: 'br', label: 'Brazil', emoji: '🇧🇷', translationLocale: 'pt' },
   { id: 'in', label: 'India', emoji: '🇮🇳', translationLocale: 'hi' },
   { id: 'ae', label: 'UAE', emoji: '🇦🇪', translationLocale: 'ar' },
-  { id: 'us', label: 'United States', emoji: '🇺🇸', translationLocale: 'none' },
-  { id: 'uk', label: 'United Kingdom', emoji: '🇬🇧', translationLocale: 'none' },
-  { id: 'au', label: 'Australia', emoji: '🇦🇺', translationLocale: 'none' },
+  { id: 'th', label: 'Thailand', emoji: '🇹🇭', translationLocale: 'th' },
+  { id: 'id', label: 'Indonesia', emoji: '🇮🇩', translationLocale: 'id' },
+  { id: 'vn', label: 'Vietnam', emoji: '🇻🇳', translationLocale: 'vi' },
   { id: 'other', label: 'Other', emoji: '🌍', translationLocale: 'none' },
 ]
 
@@ -159,6 +162,36 @@ export const LOCALE_UI: Record<TranslationLocale, LocaleUiLabels> = {
     unlockHint: 'Unlock Arabic word help for this word.',
     comingSoonHint: 'Arabic translations are coming soon!',
   },
+  th: {
+    flag: '🇹🇭',
+    languageName: 'ภาษาไทย',
+    panelTitle: 'คำแปลภาษาไทย',
+    wordLabel: 'คำศัพท์',
+    meaningLabel: 'ความหมาย',
+    exampleLabel: 'ตัวอย่าง',
+    unlockHint: 'ปลดล็อกเพื่อดูคำแปล ความหมาย และตัวอย่างประโยค',
+    comingSoonHint: '',
+  },
+  id: {
+    flag: '🇮🇩',
+    languageName: 'Bahasa Indonesia',
+    panelTitle: 'Terjemahan',
+    wordLabel: 'Kata',
+    meaningLabel: 'Arti',
+    exampleLabel: 'Contoh',
+    unlockHint: 'Buka kunci untuk melihat terjemahan, arti, dan contoh kalimat.',
+    comingSoonHint: '',
+  },
+  vi: {
+    flag: '🇻🇳',
+    languageName: 'Tiếng Việt',
+    panelTitle: 'Bản dịch',
+    wordLabel: 'Từ',
+    meaningLabel: 'Nghĩa',
+    exampleLabel: 'Ví dụ',
+    unlockHint: 'Mở khóa để xem bản dịch, nghĩa và câu ví dụ.',
+    comingSoonHint: '',
+  },
   none: {
     flag: '🌍',
     languageName: 'English',
@@ -179,8 +212,10 @@ export function getTranslationLocale(homeCountry: HomeCountryId | string): Trans
   return getHomeCountryById(homeCountry)?.translationLocale ?? 'none'
 }
 
+const LOCALES_WITH_WORD_DATA: TranslationLocale[] = ['zh', 'th', 'id', 'vi']
+
 export function localeHasWordData(locale: TranslationLocale): boolean {
-  return locale === 'zh'
+  return LOCALES_WITH_WORD_DATA.includes(locale)
 }
 
 export function showTranslationFeature(locale: TranslationLocale): boolean {
