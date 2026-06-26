@@ -1,18 +1,21 @@
 import { useState } from 'react'
 import { BigButton } from '../components/BigButton'
 import { PETS } from '../data/content'
+import { HOME_COUNTRIES } from '../data/homeCountries'
 import { useGameStore } from '../store/gameStore'
-import type { PetType } from '../types'
+import type { HomeCountryId, PetType } from '../types'
 
 export function OnboardingScreen() {
-  const { setPlayerName, selectPet, completeOnboarding } = useGameStore()
+  const { setPlayerName, setHomeCountry, selectPet, completeOnboarding } = useGameStore()
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
+  const [country, setCountry] = useState<HomeCountryId | null>(null)
   const [chosenPet, setChosenPet] = useState<PetType | null>(null)
 
   const handleFinish = () => {
-    if (!name.trim() || !chosenPet) return
+    if (!name.trim() || !country || !chosenPet) return
     setPlayerName(name.trim())
+    setHomeCountry(country)
     selectPet(chosenPet)
     completeOnboarding()
   }
@@ -29,7 +32,7 @@ export function OnboardingScreen() {
             Learn English with your very own pet friend!
           </p>
           <BigButton onClick={() => setStep(1)} size="xl">
-            Let's Go! 🚀
+            Let&apos;s Go! 🚀
           </BigButton>
         </div>
       )}
@@ -37,7 +40,7 @@ export function OnboardingScreen() {
       {step === 1 && (
         <div className="text-center animate-pop max-w-md w-full">
           <h2 className="font-kid text-3xl font-bold text-grape mb-2">
-            What's your name?
+            What&apos;s your name?
           </h2>
           <p className="font-kid text-lg text-gray-500 mb-6">
             Your pet wants to know you!
@@ -69,6 +72,40 @@ export function OnboardingScreen() {
       {step === 2 && (
         <div className="text-center animate-pop max-w-lg w-full">
           <h2 className="font-kid text-3xl font-bold text-grape mb-2">
+            Where are you from?
+          </h2>
+          <p className="font-kid text-lg text-gray-500 mb-6">
+            We&apos;ll show word help in your language when you learn!
+          </p>
+          <div className="grid grid-cols-2 gap-3 mb-8 max-h-[50vh] overflow-y-auto pr-1">
+            {HOME_COUNTRIES.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setCountry(option.id)}
+                className={`
+                  p-3 rounded-2xl border-4 transition-all duration-200
+                  font-kid active:scale-95 text-left
+                  ${country === option.id
+                    ? 'border-berry bg-berry/10 scale-[1.02] shadow-lg'
+                    : 'border-gray-200 bg-white hover:border-sky hover:shadow-md'
+                  }
+                `}
+              >
+                <span className="text-3xl mr-2">{option.emoji}</span>
+                <span className="font-bold text-sm text-gray-800">{option.label}</span>
+              </button>
+            ))}
+          </div>
+          <BigButton onClick={() => setStep(3)} disabled={!country} size="xl">
+            Next ➡️
+          </BigButton>
+        </div>
+      )}
+
+      {step === 3 && (
+        <div className="text-center animate-pop max-w-lg w-full">
+          <h2 className="font-kid text-3xl font-bold text-grape mb-2">
             Choose Your Pet!
           </h2>
           <p className="font-kid text-lg text-gray-500 mb-6">
@@ -78,6 +115,7 @@ export function OnboardingScreen() {
             {PETS.map((pet) => (
               <button
                 key={pet.id}
+                type="button"
                 onClick={() => setChosenPet(pet.id)}
                 className={`
                   p-4 rounded-3xl border-4 transition-all duration-200

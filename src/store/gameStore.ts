@@ -1,13 +1,14 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { GameStore, PetType, Screen } from '../types'
+import type { GameStore, HomeCountryId, PetType, Screen } from '../types'
 import { FOOD_HUNGER, SHOP_ITEMS, getShopItemById } from '../data/content'
-import { TRANSLATION_UNLOCK_COST } from '../data/wordTranslationsZh'
+import { TRANSLATION_UNLOCK_COST } from '../data/wordTranslations'
 import { calculatePetDecay, clampPetStat } from '../utils/petDecay'
 
 const initialState = {
   playerName: '',
   selectedPet: null as PetType | null,
+  homeCountry: 'cn' as HomeCountryId,
   coins: 0,
   hunger: 80,
   happiness: 80,
@@ -59,6 +60,8 @@ export const useGameStore = create<GameStore>()(
       setPlayerName: (name) => set({ playerName: name }),
 
       selectPet: (pet) => set({ selectedPet: pet }),
+
+      setHomeCountry: (country) => set({ homeCountry: country }),
 
       completeOnboarding: () =>
         set({
@@ -200,7 +203,7 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: 'bb8-english-save',
-      version: 7,
+      version: 8,
       migrate: (persisted, version) => {
         let state = { ...(persisted as GameStore), currentScreen: (persisted as GameStore).currentScreen ?? 'onboarding' }
         if (version < 2) {
@@ -225,6 +228,9 @@ export const useGameStore = create<GameStore>()(
           if (screen === 'practice') {
             state.currentScreen = 'challenge'
           }
+        }
+        if (version < 8) {
+          state.homeCountry = state.homeCountry ?? 'cn'
         }
         return state
       },

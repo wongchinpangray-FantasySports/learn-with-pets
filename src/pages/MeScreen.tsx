@@ -11,12 +11,19 @@ import {
   getShopItemById,
   LESSONS,
 } from '../data/content'
+import {
+  getHomeCountryById,
+  getTranslationLocale,
+  LOCALE_UI,
+  showTranslationFeature,
+} from '../data/homeCountries'
 import { useGameStore } from '../store/gameStore'
 
 export function MeScreen() {
   const {
     playerName,
     selectedPet,
+    homeCountry,
     coins,
     hunger,
     happiness,
@@ -30,6 +37,9 @@ export function MeScreen() {
   } = useGameStore()
 
   const pet = selectedPet ? getPetById(selectedPet) : null
+  const country = getHomeCountryById(homeCountry)
+  const translationLocale = getTranslationLocale(homeCountry)
+  const localeUi = LOCALE_UI[translationLocale]
   const totalLessons = LESSONS.length
   const wordsLearned = getLearnedVocabularyWords(completedLessons).length
   const ownedGear = ownedItems
@@ -54,6 +64,21 @@ export function MeScreen() {
           Earn coins from lessons and challenges!
         </p>
       </div>
+
+      {country && (
+        <div className="bg-white rounded-3xl shadow-lg p-4 mb-5 border-2 border-sky-100 flex items-center gap-3">
+          <span className="text-3xl">{country.emoji}</span>
+          <div>
+            <p className="font-kid text-xs text-gray-500 font-semibold">From</p>
+            <p className="font-kid text-lg font-bold text-gray-800">{country.label}</p>
+            {showTranslationFeature(translationLocale) && (
+              <p className="font-kid text-xs text-gray-500">
+                Word help: {localeUi.flag} {localeUi.languageName}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <BgmVolumeControl />
 
@@ -91,7 +116,7 @@ export function MeScreen() {
         <div className="grid grid-cols-2 gap-3 mb-4">
           <StatCard emoji="📚" label="Lessons done" value={`${completedLessons.length}/${totalLessons}`} />
           <StatCard emoji="📝" label="Words learned" value={String(wordsLearned)} />
-          <StatCard emoji="🇨🇳" label="Translations" value={String(unlockedTranslations.length)} />
+          <StatCard emoji={localeUi.flag} label="Translations" value={String(unlockedTranslations.length)} />
           <StatCard emoji="🛍️" label="Items owned" value={String(ownedGear.length)} />
           <StatCard emoji="🍎" label="Snacks in bag" value={String(foodCount)} />
         </div>

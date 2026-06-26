@@ -1,5 +1,24 @@
 export type PetType = 'cat' | 'dog' | 'dragon' | 'bunny'
 
+export type HomeCountryId =
+  | 'cn'
+  | 'hk'
+  | 'tw'
+  | 'sg'
+  | 'jp'
+  | 'kr'
+  | 'es'
+  | 'mx'
+  | 'fr'
+  | 'de'
+  | 'br'
+  | 'in'
+  | 'ae'
+  | 'us'
+  | 'uk'
+  | 'au'
+  | 'other'
+
 export type Screen =
   | 'onboarding'
   | 'home'
@@ -51,6 +70,7 @@ export interface ShopItem {
 export interface GameState {
   playerName: string
   selectedPet: PetType | null
+  homeCountry: HomeCountryId
   coins: number
   hunger: number
   happiness: number
@@ -70,6 +90,7 @@ export interface GameState {
 export interface GameActions {
   setPlayerName: (name: string) => void
   selectPet: (pet: PetType) => void
+  setHomeCountry: (country: HomeCountryId) => void
   completeOnboarding: () => void
   addCoins: (amount: number) => void
   spendCoins: (amount: number) => boolean

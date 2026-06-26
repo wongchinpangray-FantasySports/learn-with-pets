@@ -3,14 +3,22 @@ import { PageShell } from '../components/PageShell'
 import { BigButton } from '../components/BigButton'
 import { CoinDisplay } from '../components/CoinDisplay'
 import { LESSONS } from '../data/content'
-import { getWordTranslationZh, TRANSLATION_UNLOCK_COST } from '../data/wordTranslationsZh'
-import type { WordTranslationZh } from '../data/wordTranslationsZh'
+import { getWordTranslation, TRANSLATION_UNLOCK_COST } from '../data/wordTranslations'
+import type { WordTranslation } from '../data/wordTranslations'
+import {
+  getTranslationLocale,
+  localeHasWordData,
+  LOCALE_UI,
+  showTranslationFeature,
+  type TranslationLocale,
+} from '../data/homeCountries'
 import { useGameStore } from '../store/gameStore'
 import { speak, speakNarration, stopSpeaking } from '../utils/audio'
 import type { Lesson } from '../types'
 
 export function LearnScreen() {
-  const { completedLessons, completeLesson, coins } = useGameStore()
+  const { completedLessons, completeLesson, coins, homeCountry } = useGameStore()
+  const translationLocale = getTranslationLocale(homeCountry)
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null)
   const [wordIndex, setWordIndex] = useState(0)
   const [showReward, setShowReward] = useState(false)
@@ -149,13 +157,16 @@ export function LearnScreen() {
   if (activeLesson.category === 'vocabulary' && activeLesson.words) {
     const word = activeLesson.words[wordIndex]
     const progress = ((wordIndex + 1) / activeLesson.words.length) * 100
-    const translation = getWordTranslationZh(word.word)
+    const translation = getWordTranslation(word.word, translationLocale)
+    const showTranslationPanel = showTranslationFeature(translationLocale)
 
     return (
       <VocabWordView
         lessonTitle={activeLesson.title}
         word={word}
         translation={translation}
+        translationLocale={translationLocale}
+        showTranslationPanel={showTranslationPanel}
         wordIndex={wordIndex}
         totalWords={activeLesson.words.length}
         progress={progress}
@@ -182,7 +193,9 @@ export function LearnScreen() {
 interface VocabWordViewProps {
   lessonTitle: string
   word: { word: string; emoji: string; definition: string; example: string }
-  translation?: WordTranslationZh
+  translation?: WordTranslation
+  translationLocale: TranslationLocale
+  showTranslationPanel: boolean
   wordIndex: number
   totalWords: number
   progress: number
@@ -193,16 +206,20 @@ interface VocabWordViewProps {
   isLastWord: boolean
 }
 
-function ChineseTranslationPanel({
+function WordTranslationPanel({
   wordKey,
   translation,
+  locale,
 }: {
   wordKey: string
-  translation: WordTranslationZh
+  translation?: WordTranslation
+  locale: TranslationLocale
 }) {
   const { coins, unlockedTranslations, unlockTranslation } = useGameStore()
+  const labels = LOCALE_UI[locale]
   const isUnlocked = unlockedTranslations.includes(wordKey.toLowerCase())
   const canAfford = coins >= TRANSLATION_UNLOCK_COST
+  const hasData = localeHasWordData(locale) && translation
 
   const handleUnlock = () => {
     unlockTranslation(wordKey)
@@ -210,49 +227,55 @@ function ChineseTranslationPanel({
 
   return (
     <div className="mt-5 pt-5 border-t-2 border-dashed border-sky/30 text-left">
-      <p className="font-kid text-sm font-semibold text-gray-500 mb-3">🇨🇳 中文翻译</p>
-      {isUnlocked ? (
-        <div className="space-y-3 font-kid text-gray-800">
-          <div>
-            <p className="text-xs font-semibold text-gray-400 mb-1">单词</p>
-            <p className="text-2xl font-bold">{translation.word}</p>
+      <p className="font-kid text-sm font-semibold text-gray-500 mb-3">
+        {labels.flag} {labels.panelTitle}
+      </p>
+      {hasData ? (
+        isUnlocked ? (
+          <div className="space-y-3 font-kid text-gray-800">
+            <div>
+              <p className="text-xs font-semibold text-gray-400 mb-1">{labels.wordLabel}</p>
+              <p className="text-2xl font-bold">{translation.word}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-400 mb-1">{labels.meaningLabel}</p>
+              <p className="text-lg leading-relaxed">{translation.meaning}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-400 mb-1">{labels.exampleLabel}</p>
+              <p className="text-lg leading-relaxed text-grape italic">
+                「{translation.example}」
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-400 mb-1">意思</p>
-            <p className="text-lg leading-relaxed">{translation.meaning}</p>
+        ) : (
+          <div className="text-center">
+            <p className="font-kid text-sm text-gray-500 mb-3">{labels.unlockHint}</p>
+            <button
+              type="button"
+              onClick={handleUnlock}
+              disabled={!canAfford}
+              className={`
+                font-kid w-full px-4 py-3 rounded-2xl border-2 transition-all active:scale-[0.98]
+                ${canAfford
+                  ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                  : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                }
+              `}
+            >
+              🔓 Unlock translation · {TRANSLATION_UNLOCK_COST} 🪙
+            </button>
+            {!canAfford && (
+              <p className="font-kid text-sm text-orange-500 mt-2">
+                Not enough coins — finish lessons to earn more!
+              </p>
+            )}
           </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-400 mb-1">例句</p>
-            <p className="text-lg leading-relaxed text-grape italic">
-              「{translation.example}」
-            </p>
-          </div>
-        </div>
+        )
       ) : (
-        <div className="text-center">
-          <p className="font-kid text-sm text-gray-500 mb-3">
-            解锁后可查看单词、意思和例句的中文翻译
-          </p>
-          <button
-            type="button"
-            onClick={handleUnlock}
-            disabled={!canAfford}
-            className={`
-              font-kid w-full px-4 py-3 rounded-2xl border-2 transition-all active:scale-[0.98]
-              ${canAfford
-                ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
-                : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-              }
-            `}
-          >
-            🔓 Unlock translation · {TRANSLATION_UNLOCK_COST} 🪙
-          </button>
-          {!canAfford && (
-            <p className="font-kid text-sm text-orange-500 mt-2">
-              Not enough coins — finish lessons to earn more!
-            </p>
-          )}
-        </div>
+        <p className="font-kid text-sm text-gray-500 text-center py-2">
+          {labels.comingSoonHint}
+        </p>
       )}
     </div>
   )
@@ -262,6 +285,8 @@ function VocabWordView({
   lessonTitle,
   word,
   translation,
+  translationLocale,
+  showTranslationPanel,
   wordIndex,
   totalWords,
   progress,
@@ -320,8 +345,12 @@ function VocabWordView({
             "{word.example}"
           </p>
 
-          {translation && (
-            <ChineseTranslationPanel wordKey={word.word} translation={translation} />
+          {showTranslationPanel && (
+            <WordTranslationPanel
+              wordKey={word.word}
+              translation={translation}
+              locale={translationLocale}
+            />
           )}
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-center mt-6">
