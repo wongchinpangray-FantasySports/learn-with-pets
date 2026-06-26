@@ -200,7 +200,7 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: 'bb8-english-save',
-      version: 6,
+      version: 7,
       migrate: (persisted, version) => {
         let state = { ...(persisted as GameStore), currentScreen: (persisted as GameStore).currentScreen ?? 'onboarding' }
         if (version < 2) {
@@ -219,6 +219,12 @@ export const useGameStore = create<GameStore>()(
         }
         if (version < 6) {
           state.lastPetDecayAt = state.lastPetDecayAt ?? Date.now()
+        }
+        if (version < 7) {
+          const screen = state.currentScreen as string
+          if (screen === 'practice') {
+            state.currentScreen = 'challenge'
+          }
         }
         return state
       },

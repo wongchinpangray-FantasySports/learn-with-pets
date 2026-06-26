@@ -10,7 +10,7 @@ interface NavBarProps {
 const NAV_ITEMS: { screen: Screen; emoji: string; label: string }[] = [
   { screen: 'home', emoji: '🏠', label: 'Home' },
   { screen: 'learn', emoji: '📚', label: 'Learn' },
-  { screen: 'practice', emoji: '🎤', label: 'Practice' },
+  { screen: 'challenge', emoji: '🎤', label: 'Challenge' },
   { screen: 'pet', emoji: '🐾', label: 'Pet' },
   { screen: 'shop', emoji: '🛍️', label: 'Shop' },
   { screen: 'me', emoji: '👤', label: 'Me' },

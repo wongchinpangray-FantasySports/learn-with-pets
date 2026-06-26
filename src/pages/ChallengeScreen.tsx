@@ -10,15 +10,15 @@ import {
   listenForSpeechWithPrep,
   comparePronunciation,
   isSpeechRecognitionSupported,
-  PRACTICE_LISTEN_MS,
-  PRACTICE_PREP_MS,
+  CHALLENGE_LISTEN_MS,
+  CHALLENGE_PREP_MS,
 } from '../utils/audio'
 
-type PracticeState = 'pick' | 'ready' | 'prep' | 'listening' | 'result'
+type ChallengeState = 'pick' | 'ready' | 'prep' | 'listening' | 'result'
 
-export function PracticeScreen() {
+export function ChallengeScreen() {
   const { coins, addCoins, completedLessons, setScreen } = useGameStore()
-  const [state, setState] = useState<PracticeState>('pick')
+  const [state, setState] = useState<ChallengeState>('pick')
   const [currentWord, setCurrentWord] = useState<{ word: string; emoji: string } | null>(null)
   const [result, setResult] = useState<{ score: number; passed: boolean; feedback: string; spoken: string } | null>(null)
   const [totalScore, setTotalScore] = useState(0)
@@ -28,7 +28,7 @@ export function PracticeScreen() {
   const maxRounds = 5
   const listeningRef = useRef(false)
 
-  const practiceWords = useMemo(
+  const challengeWords = useMemo(
     () => getLearnedVocabularyWords(completedLessons),
     [completedLessons]
   )
@@ -41,8 +41,8 @@ export function PracticeScreen() {
   }, [])
 
   const pickWord = () => {
-    if (practiceWords.length === 0) return
-    const word = practiceWords[Math.floor(Math.random() * practiceWords.length)]
+    if (challengeWords.length === 0) return
+    const word = challengeWords[Math.floor(Math.random() * challengeWords.length)]
     setCurrentWord({ word: word.word, emoji: word.emoji })
     setState('ready')
     setResult(null)
@@ -65,13 +65,13 @@ export function PracticeScreen() {
     listeningRef.current = true
     stopSpeaking()
     setState('prep')
-    setSecondsLeft(Math.ceil(PRACTICE_PREP_MS / 1000))
+    setSecondsLeft(Math.ceil(CHALLENGE_PREP_MS / 1000))
     setListenProgress(100)
 
     try {
       const spoken = await listenForSpeechWithPrep(
-        PRACTICE_LISTEN_MS,
-        PRACTICE_PREP_MS,
+        CHALLENGE_LISTEN_MS,
+        CHALLENGE_PREP_MS,
         (nextPhase, secs) => {
           setSecondsLeft(secs)
           if (nextPhase === 'listening') {
@@ -112,7 +112,7 @@ export function PracticeScreen() {
     if (state !== 'listening') return
 
     const started = Date.now()
-    const duration = PRACTICE_LISTEN_MS
+    const duration = CHALLENGE_LISTEN_MS
 
     const timer = setInterval(() => {
       const elapsed = Date.now() - started
@@ -136,20 +136,20 @@ export function PracticeScreen() {
   }
 
   const speechSupported = isSpeechRecognitionSupported()
-  const prepSeconds = Math.ceil(PRACTICE_PREP_MS / 1000)
-  const listenSeconds = Math.ceil(PRACTICE_LISTEN_MS / 1000)
-  const hasLearnedWords = practiceWords.length > 0
+  const prepSeconds = Math.ceil(CHALLENGE_PREP_MS / 1000)
+  const listenSeconds = Math.ceil(CHALLENGE_LISTEN_MS / 1000)
+  const hasLearnedWords = challengeWords.length > 0
 
   return (
     <PageShell className="bg-gradient-to-b from-purple-50 to-white">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="font-kid text-3xl font-bold text-gray-800">🎤 Practice</h1>
+          <h1 className="font-kid text-3xl font-bold text-gray-800">🎤 Challenge</h1>
           <CoinDisplay amount={coins} size="sm" />
         </div>
 
         {!speechSupported && (
           <div className="bg-amber-100 border-2 border-amber-300 rounded-2xl p-4 mb-6 font-kid text-amber-800">
-            ⚠️ Speech recognition works best in Chrome! Try using Chrome for pronunciation practice.
+            ⚠️ Speech recognition works best in Chrome! Try using Chrome for pronunciation challenges.
           </div>
         )}
 
@@ -162,22 +162,22 @@ export function PracticeScreen() {
             {hasLearnedWords ? (
               <>
                 <p className="font-kid text-gray-600 mb-8">
-                  Practice words from your Learn chapters!
+                  Challenge yourself with words from your Learn chapters!
                   <br />
-                  You have <strong>{practiceWords.length}</strong> word{practiceWords.length === 1 ? '' : 's'} ready.
+                  You have <strong>{challengeWords.length}</strong> word{challengeWords.length === 1 ? '' : 's'} ready.
                   <br />
                   Get ready ({prepSeconds}s), then speak ({listenSeconds}s).
                   <br />
                   Earn 3 🪙 for each good try!
                 </p>
                 <BigButton onClick={pickWord} size="xl">
-                  Start Practice! 🚀
+                  Start Challenge! 🚀
                 </BigButton>
               </>
             ) : (
               <>
                 <p className="font-kid text-gray-600 mb-8">
-                  Finish a vocabulary lesson in Learn first — then come back here to practice those words!
+                  Finish a vocabulary lesson in Learn first — then come back here to challenge those words!
                 </p>
                 <BigButton onClick={() => setScreen('learn')} size="xl">
                   Go to Learn 📚
@@ -273,7 +273,7 @@ export function PracticeScreen() {
                   Session Complete! Average: {Math.round(totalScore / maxRounds)}%
                 </p>
                 <BigButton onClick={handleNext} size="xl">
-                  Practice Again! 🔄
+                  Challenge Again! 🔄
                 </BigButton>
               </div>
             ) : (

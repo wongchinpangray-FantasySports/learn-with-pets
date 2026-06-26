@@ -109,11 +109,11 @@ export function HomeScreen() {
             <div className="text-sm opacity-90">New words!</div>
           </button>
           <button
-            onClick={() => setScreen('practice')}
+            onClick={() => setScreen('challenge')}
             className="bg-gradient-to-br from-grape to-purple-500 text-white rounded-3xl p-5 shadow-lg active:scale-95 transition-transform font-kid"
           >
             <div className="text-4xl mb-2">🎤</div>
-            <div className="font-bold text-lg">Practice</div>
+            <div className="font-bold text-lg">Challenge</div>
             <div className="text-sm opacity-90">Say it out loud!</div>
           </button>
           <button

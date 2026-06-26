@@ -42,7 +42,7 @@ export function NarrationSpeedControl({ compact = false }: { compact?: boolean }
           </span>
         </div>
         <p className="font-kid text-[10px] text-gray-400 mt-1 text-center">
-          Saved for Learn &amp; Practice too
+          Saved for Learn &amp; Challenge too
         </p>
       </div>
     )
@@ -73,7 +73,7 @@ export function NarrationSpeedControl({ compact = false }: { compact?: boolean }
         <span>Faster</span>
       </div>
       <p className="font-kid text-xs text-gray-400 mt-2 text-center">
-        Applies to all lessons and practice
+        Applies to all lessons and challenges
       </p>
     </div>
   )

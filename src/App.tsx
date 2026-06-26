@@ -4,7 +4,7 @@ import { loadVoices } from './utils/audio'
 import { OnboardingScreen } from './pages/OnboardingScreen'
 import { HomeScreen } from './pages/HomeScreen'
 import { LearnScreen } from './pages/LearnScreen'
-import { PracticeScreen } from './pages/PracticeScreen'
+import { ChallengeScreen } from './pages/ChallengeScreen'
 import { ShopScreen } from './pages/ShopScreen'
 import { PetScreen } from './pages/PetScreen'
 import { MeScreen } from './pages/MeScreen'
@@ -23,7 +23,7 @@ export default function App() {
   const screens = {
     home: <HomeScreen />,
     learn: <LearnScreen />,
-    practice: <PracticeScreen />,
+    challenge: <ChallengeScreen />,
     shop: <ShopScreen />,
     pet: <PetScreen />,
     me: <MeScreen />,

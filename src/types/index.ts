@@ -4,7 +4,7 @@ export type Screen =
   | 'onboarding'
   | 'home'
   | 'learn'
-  | 'practice'
+  | 'challenge'
   | 'shop'
   | 'pet'
   | 'me'

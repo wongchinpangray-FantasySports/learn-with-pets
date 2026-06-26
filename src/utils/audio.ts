@@ -214,8 +214,8 @@ export function isSpeechRecognitionSupported(): boolean {
   return getSpeechRecognition() !== null
 }
 
-export const PRACTICE_PREP_MS = 3000
-export const PRACTICE_LISTEN_MS = 5000
+export const CHALLENGE_PREP_MS = 3000
+export const CHALLENGE_LISTEN_MS = 5000
 
 const RECOVERABLE_SPEECH_ERRORS = new Set([
   'no-speech',
@@ -233,8 +233,8 @@ function delay(ms: number): Promise<void> {
  * Never ends early — kids always get the full window to speak.
  */
 export async function listenForSpeechWithPrep(
-  listenMs = PRACTICE_LISTEN_MS,
-  prepMs = PRACTICE_PREP_MS,
+  listenMs = CHALLENGE_LISTEN_MS,
+  prepMs = CHALLENGE_PREP_MS,
   onPhase?: (phase: 'prep' | 'listening', secondsLeft: number) => void
 ): Promise<string> {
   if (prepMs > 0) {
@@ -250,7 +250,7 @@ export async function listenForSpeechWithPrep(
 }
 
 export function listenForSpeech(
-  timeoutMs = PRACTICE_LISTEN_MS,
+  timeoutMs = CHALLENGE_LISTEN_MS,
   onTick?: (phase: 'prep' | 'listening', secondsLeft: number) => void
 ): Promise<string> {
   return new Promise((resolve, reject) => {

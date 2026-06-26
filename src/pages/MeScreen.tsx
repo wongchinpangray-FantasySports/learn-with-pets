@@ -51,7 +51,7 @@ export function MeScreen() {
         <p className="font-kid text-sm text-amber-700 font-semibold mb-1">My Coins</p>
         <p className="font-kid text-5xl font-bold text-amber-600">{coins} 🪙</p>
         <p className="font-kid text-sm text-gray-500 mt-2">
-          Earn coins from lessons and practice!
+          Earn coins from lessons and challenges!
         </p>
       </div>
 
