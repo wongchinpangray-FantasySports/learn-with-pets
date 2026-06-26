@@ -26,6 +26,10 @@ let mp3Buffer: AudioBuffer | null = null
 let mp3BufferSource: AudioBufferSourceNode | null = null
 let mp3State: 'idle' | 'loading' | 'ready' | 'missing' = 'idle'
 let mp3LoadPromise: Promise<boolean> | null = null
+/** Invalidates in-flight MP3 starts so only one source can play. */
+let mp3StartGeneration = 0
+let beginBgmInFlight: Promise<void> | null = null
+let syncMp3InFlight: Promise<void> | null = null
 
 function ensureAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null
@@ -69,19 +73,25 @@ function applyDuckVolume(): void {
   musicGain.gain.value = duckCount > 0 ? DUCK_RATIO : 1
 }
 
-function stopMp3Source(): void {
-  if (!mp3BufferSource) return
+function disposeMp3Source(source: AudioBufferSourceNode): void {
   try {
-    mp3BufferSource.stop()
+    source.stop()
   } catch {
     /* already stopped */
   }
   try {
-    mp3BufferSource.disconnect()
+    source.disconnect()
   } catch {
     /* ignore */
   }
-  mp3BufferSource = null
+}
+
+function stopMp3Source(): void {
+  mp3StartGeneration++
+  if (mp3BufferSource) {
+    disposeMp3Source(mp3BufferSource)
+    mp3BufferSource = null
+  }
 }
 
 async function loadMp3Buffer(): Promise<boolean> {
@@ -123,6 +133,7 @@ async function startMp3Source(): Promise<boolean> {
   if (!mp3Buffer || !audioCtx || !musicGain) return false
 
   stopMp3Source()
+  const gen = mp3StartGeneration
 
   if (!userAudible) return true
 
@@ -133,31 +144,50 @@ async function startMp3Source(): Promise<boolean> {
 
   try {
     await resumeAudioContext()
+    if (gen !== mp3StartGeneration) {
+      disposeMp3Source(source)
+      return false
+    }
     source.start(0)
+    if (gen !== mp3StartGeneration) {
+      disposeMp3Source(source)
+      return false
+    }
     mp3BufferSource = source
     return true
   } catch {
-    source.disconnect()
+    disposeMp3Source(source)
     return false
   }
 }
 
 async function syncMp3Playback(): Promise<void> {
   if (bgmMode !== 'mp3' || !playing) return
+  if (syncMp3InFlight) return syncMp3InFlight
 
-  applyMasterVolume()
+  syncMp3InFlight = (async () => {
+    try {
+      applyMasterVolume()
 
-  if (!userAudible) {
-    stopMp3Source()
-    return
-  }
+      if (!userAudible) {
+        stopMp3Source()
+        return
+      }
 
-  if (!mp3BufferSource && mp3Buffer) {
-    await startMp3Source()
-  }
+      if (!mp3BufferSource && mp3Buffer) {
+        await startMp3Source()
+      }
+    } finally {
+      syncMp3InFlight = null
+    }
+  })()
+
+  return syncMp3InFlight
 }
 
 async function startMp3(): Promise<boolean> {
+  stopSynth()
+
   const ok = await loadMp3Buffer()
   if (!ok || !mp3Buffer) return false
 
@@ -168,7 +198,8 @@ async function startMp3(): Promise<boolean> {
   bgmMode = 'mp3'
   playing = true
 
-  return syncMp3Playback().then(() => true)
+  await syncMp3Playback()
+  return mp3BufferSource !== null || !userAudible
 }
 
 function stopMp3(): void {
@@ -264,12 +295,14 @@ function synthTick() {
 }
 
 function startSynth(): boolean {
+  stopMp3()
   if (!ensureAudioContext()) return false
   applyMasterVolume()
   applyDuckVolume()
   bgmMode = 'synth'
   playing = true
   step = 0
+  if (tickTimer) clearInterval(tickTimer)
   tickTimer = setInterval(synthTick, (BEAT_SEC * 1000) / 2)
   return true
 }
@@ -282,21 +315,31 @@ function stopSynth(): void {
 }
 
 async function beginBgm(): Promise<void> {
-  if (playing) {
-    await syncMp3Playback()
-    return
-  }
+  if (beginBgmInFlight) return beginBgmInFlight
 
-  const mp3Ok = await startMp3()
-  if (mp3Ok) return
+  beginBgmInFlight = (async () => {
+    try {
+      if (playing) {
+        await syncMp3Playback()
+        return
+      }
 
-  startSynth()
+      const mp3Ok = await startMp3()
+      if (mp3Ok) return
+
+      startSynth()
+    } finally {
+      beginBgmInFlight = null
+    }
+  })()
+
+  return beginBgmInFlight
 }
 
 /** --- Public API --- */
 
 export function isBgmPlaying(): boolean {
-  return playing && userAudible
+  return playing && userAudible && (mp3BufferSource !== null || bgmMode === 'synth')
 }
 
 export function isBgmActive(): boolean {
@@ -315,9 +358,12 @@ export function startBgm(): boolean {
 export function stopBgm(): void {
   playing = false
   userAudible = true
+  mp3StartGeneration++
   stopMp3()
   stopSynth()
   bgmMode = null
+  beginBgmInFlight = null
+  syncMp3InFlight = null
 }
 
 export function getBgmVolume(): number {
