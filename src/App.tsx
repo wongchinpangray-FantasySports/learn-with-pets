@@ -12,6 +12,7 @@ import { NavBar } from './components/NavBar'
 import { BgmManager } from './components/BgmManager'
 import { BgmToggle } from './components/BgmToggle'
 import { PetDecayManager } from './components/PetDecayManager'
+import { SessionTimerManager } from './components/SessionTimerManager'
 
 export default function App() {
   const { onboarded, currentScreen, setScreen } = useGameStore()
@@ -34,6 +35,7 @@ export default function App() {
     <>
       <BgmManager />
       <PetDecayManager />
+      <SessionTimerManager />
       {!onboarded ? (
         <>
           <OnboardingScreen />
